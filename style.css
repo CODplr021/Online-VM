@@ -10,6 +10,7 @@ body {
     margin: 0 !important;
     font-family: 'Poppins', sans-serif !important;
     color: #fff !important;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%233b82f6" d="M2 2l8 24 5-8 8-1-21-15z"/></svg>') 4 4, auto !important;
 }
 
 .header-bar {
