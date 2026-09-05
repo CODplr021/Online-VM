@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let bootSequenceActive = false;
     let countdownInterval = null;
     let biosPressed = false;
-    let bootOrder = ["hda", "cdrom", "fda"]; // Default: Hard drive, CD-ROM, Floppy
+    let bootOrder = ["cdrom", "hda", "fda"]; // Default: CD-ROM first, then Hard drive, then Floppy
     let selectedISO = null;
     let selectedFloppy = null;
     let biosTimeout = null;
@@ -44,20 +44,50 @@ document.addEventListener("DOMContentLoaded", function() {
         screenArea.style.display = "flex";
         clearInterval(biosTimeout);
 
-        // Build v86 parameters based on boot order and selected media
-        let v86Params = "profile=tinycore";
+        // Build v86 configuration
+        let v86URL = "https://copy.sh/v86/?";
         
+        // If ISO is loaded, use custom boot configuration
         if (selectedISO) {
-            v86Params += `&cdrom=${encodeURIComponent(selectedISO)}`;
-        }
-        if (selectedFloppy) {
-            v86Params += `&fda=${encodeURIComponent(selectedFloppy)}`;
+            // Store ISO in sessionStorage for v86 to access
+            sessionStorage.setItem("customISO", selectedISO);
+            
+            // Build v86 with custom settings for ISO boot
+            v86URL += "cpu=auto&ram=512&vga=vga";
+            
+            // Try to boot from CD-ROM first
+            v86URL += "&boot_order=d"; // d = CD-ROM/CDROM
+            
+            // Pass ISO as CDROM via URL encoding (if supported by v86)
+            if (selectedISO.length < 50000) { // Only if reasonably sized
+                try {
+                    const blob = new Blob([selectedISO], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    v86URL += `&cdrom=${encodeURIComponent(url)}`;
+                } catch (e) {
+                    console.log("ISO too large for URL, using sessionStorage");
+                }
+            }
+        } else if (selectedFloppy) {
+            // If floppy is loaded
+            sessionStorage.setItem("customFloppy", selectedFloppy);
+            v86URL += "cpu=auto&ram=512&vga=vga&boot_order=a"; // a = Floppy
+            
+            if (selectedFloppy.length < 50000) {
+                try {
+                    const blob = new Blob([selectedFloppy], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    v86URL += `&fda=${encodeURIComponent(url)}`;
+                } catch (e) {
+                    console.log("Floppy too large for URL, using sessionStorage");
+                }
+            }
+        } else {
+            // Default TinyCore boot
+            v86URL = "https://copy.sh/v86/?profile=tinycore";
         }
 
-        // Set boot order in v86
-        v86Params += `&boot_order=${bootOrder.join(",")}`;
-
-        screenArea.innerHTML = `<iframe src="https://copy.sh/v86/?${v86Params}"></iframe>`;
+        screenArea.innerHTML = `<iframe src="${v86URL}"></iframe>`;
     }
 
     function enterBIOS() {
@@ -95,8 +125,8 @@ document.addEventListener("DOMContentLoaded", function() {
         bootOrderOption.addEventListener("click", function() {
             // Cycle boot order
             const orders = [
+                ["cdrom", "hda", "fda"],
                 ["hda", "cdrom", "fda"],
-                ["cdrom", "fda", "hda"],
                 ["fda", "hda", "cdrom"]
             ];
             const currentIndex = orders.findIndex(order => JSON.stringify(order) === JSON.stringify(bootOrder));
@@ -122,10 +152,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     selectedISO = event.target.result;
-                    // Show status update without full refresh
+                    // Clear floppy if ISO is selected
+                    selectedFloppy = null;
+                    // Show status update
                     const statusEl = screenArea.querySelector('[data-action="iso-upload"]');
+                    const floppyEl = screenArea.querySelector('[data-action="floppy-upload"]');
                     if (statusEl) {
                         statusEl.textContent = "Load ISO Image (✓ ISO Loaded)";
+                    }
+                    if (floppyEl) {
+                        floppyEl.textContent = "Load Floppy Image (No Floppy)";
                     }
                 };
                 reader.readAsArrayBuffer(file);
@@ -138,10 +174,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     selectedFloppy = event.target.result;
-                    // Show status update without full refresh
+                    // Clear ISO if floppy is selected
+                    selectedISO = null;
+                    // Show status update
                     const statusEl = screenArea.querySelector('[data-action="floppy-upload"]');
+                    const isoEl = screenArea.querySelector('[data-action="iso-upload"]');
                     if (statusEl) {
                         statusEl.textContent = "Load Floppy Image (✓ Floppy Loaded)";
+                    }
+                    if (isoEl) {
+                        isoEl.textContent = "Load ISO Image (No ISO)";
                     }
                 };
                 reader.readAsArrayBuffer(file);
@@ -207,6 +249,10 @@ document.addEventListener("DOMContentLoaded", function() {
             bootScreen.classList.add("hidden");
             screenArea.style.display = "flex";
             screenArea.innerHTML = `<div id="offlineMessage" class="offline-text"><i class="fa-solid fa-triangle-exclamation"></i> [ System Powered Off ]</div>`;
+            
+            // Clear stored media
+            sessionStorage.removeItem("customISO");
+            sessionStorage.removeItem("customFloppy");
         }
     });
 
