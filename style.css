@@ -88,7 +88,7 @@ body {
     height: 100% !important;
     border: none !important;
     display: block !important;
-    transform: scale(1.02); /* Slight stretch to eliminate microscopic borders */
+    /* Remove this line: transform: scale(1.02); */
 }
 
 .offline-text {
