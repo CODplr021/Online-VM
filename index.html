@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Online VM</title>
+    <!-- Include FontAwesome for professional icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="header-bar">
+        <h2><i class="fa-solid fa-server"></i> VIRTUAL-BOX 3000</h2>
+        <div class="button-group">
+            <button id="powerBtn" class="control-btn power-off"><i class="fa-solid fa-power-off"></i> Power: OFF</button>
+            <button id="fsBtn" class="control-btn"><i class="fa-solid fa-expand"></i> Fullscreen</button>
+        </div>
+    </div>
+
+    <div class="monitor-frame" id="monitorContainer">
+        <div class="monitor-screen" id="screenArea">
+            <div id="offlineMessage" class="offline-text"><i class="fa-solid fa-triangle-exclamation"></i> [ System Powered Off ]</div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
