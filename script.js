@@ -1,4 +1,4 @@
-ocument.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function() {
     const powerBtn = document.getElementById("powerBtn");
     const screenArea = document.getElementById("screenArea");
     const fsBtn = document.getElementById("fsBtn");
