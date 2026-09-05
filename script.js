@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let bootOrder = ["hda", "cdrom", "fda"]; // Default: Hard drive, CD-ROM, Floppy
     let selectedISO = null;
     let selectedFloppy = null;
+    let biosTimeout = null;
 
     // Boot Screen Logic
     function startBootSequence() {
@@ -41,6 +42,7 @@ document.addEventListener("DOMContentLoaded", function() {
         bootSequenceActive = false;
         bootScreen.classList.add("hidden");
         screenArea.style.display = "flex";
+        clearInterval(biosTimeout);
 
         // Build v86 parameters based on boot order and selected media
         let v86Params = "profile=tinycore";
@@ -61,19 +63,23 @@ document.addEventListener("DOMContentLoaded", function() {
     function enterBIOS() {
         bootSequenceActive = false;
         clearInterval(countdownInterval);
+        clearInterval(biosTimeout);
         bootScreen.classList.add("hidden");
         screenArea.style.display = "flex";
+        
+        const isoStatus = selectedISO ? "✓ ISO Loaded" : "No ISO";
+        const floppyStatus = selectedFloppy ? "✓ Floppy Loaded" : "No Floppy";
         
         screenArea.innerHTML = `<div class="bios-menu"><div class="bios-content">
             <h1>BIOS Setup Utility</h1>
             <p>MrChromebox Custom BIOS v1.0</p>
             <div class="bios-options">
                 <div class="bios-option" data-action="boot-order">Boot Order: ${bootOrder.join(" → ")}</div>
-                <div class="bios-option" data-action="iso-upload">Load ISO Image</div>
-                <div class="bios-option" data-action="floppy-upload">Load Floppy Image</div>
+                <div class="bios-option" data-action="iso-upload">Load ISO Image (${isoStatus})</div>
+                <div class="bios-option" data-action="floppy-upload">Load Floppy Image (${floppyStatus})</div>
                 <div class="bios-option" data-action="boot-now">Exit & Boot</div>
             </div>
-            <p class="bios-footer">Click options or press any key to continue boot...</p>
+            <p class="bios-footer">Press any key to continue boot...</p>
             <input type="file" id="isoUpload" accept=".iso" style="display:none;">
             <input type="file" id="floppyUpload" accept=".img,.vfd,.ima,.flp" style="display:none;">
         </div></div>`;
@@ -88,7 +94,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
         bootOrderOption.addEventListener("click", function() {
             // Cycle boot order
-            bootOrder = ["cdrom", "fda", "hda"];
+            const orders = [
+                ["hda", "cdrom", "fda"],
+                ["cdrom", "fda", "hda"],
+                ["fda", "hda", "cdrom"]
+            ];
+            const currentIndex = orders.findIndex(order => JSON.stringify(order) === JSON.stringify(bootOrder));
+            bootOrder = orders[(currentIndex + 1) % orders.length];
             enterBIOS(); // Refresh to show new boot order
         });
 
@@ -110,7 +122,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     selectedISO = event.target.result;
-                    enterBIOS(); // Refresh menu
+                    // Show status update without full refresh
+                    const statusEl = screenArea.querySelector('[data-action="iso-upload"]');
+                    if (statusEl) {
+                        statusEl.textContent = "Load ISO Image (✓ ISO Loaded)";
+                    }
                 };
                 reader.readAsArrayBuffer(file);
             }
@@ -122,18 +138,20 @@ document.addEventListener("DOMContentLoaded", function() {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     selectedFloppy = event.target.result;
-                    enterBIOS(); // Refresh menu
+                    // Show status update without full refresh
+                    const statusEl = screenArea.querySelector('[data-action="floppy-upload"]');
+                    if (statusEl) {
+                        statusEl.textContent = "Load Floppy Image (✓ Floppy Loaded)";
+                    }
                 };
                 reader.readAsArrayBuffer(file);
             }
         });
 
-        // Auto-boot after 8 seconds in BIOS
-        setTimeout(() => {
-            if (bootSequenceActive === false) {
-                bootIntoOS();
-            }
-        }, 8000);
+        // Auto-boot after 10 seconds in BIOS (only once)
+        biosTimeout = setTimeout(() => {
+            bootIntoOS();
+        }, 10000);
     }
 
     // Keyboard Detection for BBB and boot sequence
@@ -185,6 +203,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             bootSequenceActive = false;
             clearInterval(countdownInterval);
+            clearInterval(biosTimeout);
             bootScreen.classList.add("hidden");
             screenArea.style.display = "flex";
             screenArea.innerHTML = `<div id="offlineMessage" class="offline-text"><i class="fa-solid fa-triangle-exclamation"></i> [ System Powered Off ]</div>`;
